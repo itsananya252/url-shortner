@@ -2,6 +2,7 @@ package com.ananya.urlshortner.web.controllers;
 
 import com.ananya.urlshortner.ApplicationProperties;
 import com.ananya.urlshortner.domain.entites.modles.Services.ShortUrlService;
+import com.ananya.urlshortner.domain.entites.modles.User;
 import com.ananya.urlshortner.domain.entites.modles.exceptions.ShortUrlNotFoundException;
 import com.ananya.urlshortner.models.CreateShortUrlCmd;
 import com.ananya.urlshortner.models.ShortUrlDto;
@@ -12,7 +13,7 @@ import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.* ;
 
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -23,14 +24,17 @@ import java.util.Optional;
 public class HomeController {
     private final ShortUrlService shortUrlService;
     private final ApplicationProperties properties;
+    private final SecurityUtils securityUtils;
 
-    public HomeController(ShortUrlService shortUrlService, ApplicationProperties properties) {
+    public HomeController(ShortUrlService shortUrlService, ApplicationProperties properties,SecurityUtils securityUtils) {
         this.shortUrlService = shortUrlService;
         this.properties = properties;
+        this.securityUtils=securityUtils;
     }
 
     @GetMapping("/")
     public String home(Model model) {
+        User currentUser=securityUtils.getCurrentUser();
         List<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls();
         model.addAttribute("shortUrls", shortUrls);
         model.addAttribute("baseUrl", properties.baseUrl());
@@ -69,6 +73,10 @@ public class HomeController {
         }
         ShortUrlDto shortUrlDto=shortUrlDtoOptional.get();
         return "redirect:"+shortUrlDto.originalUrl();
+    }
+    @GetMapping("/login")
+    String loginForm(){
+        return "login";
     }
 
 }

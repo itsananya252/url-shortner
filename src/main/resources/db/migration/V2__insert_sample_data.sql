@@ -1,6 +1,6 @@
 INSERT INTO users (email, password, name, role)
 VALUES ('admin@gmail.com', 'admin', 'Administrator', 'ROLE_ADMIN'),
-       ('siva@gmail.com', 'secret', 'Siva', 'ROLE_USER');
+       ('ananya@gmail.com', 'secret', 'Ananya', 'ROLE_USER');
 
 INSERT INTO short_urls (short_key, original_url, created_by, created_at, expires_at, is_private, click_count)
 VALUES
