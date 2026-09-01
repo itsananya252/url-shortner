@@ -3,7 +3,7 @@ html, body {
 }
 
 body {
-    padding-top: 60px;
+    padding-top: 80px;
     padding-bottom: 40px;
     display: flex;
     flex-direction: column;
@@ -19,4 +19,7 @@ body > .container {
     flex: 1 0 auto;
     display: flex;
     flex-direction: column;
+}
+.alert {
+    scroll-margin-top: 80px;
 }
