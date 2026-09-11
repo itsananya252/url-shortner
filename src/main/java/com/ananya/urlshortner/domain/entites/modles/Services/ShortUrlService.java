@@ -4,7 +4,12 @@ import com.ananya.urlshortner.ApplicationProperties;
 import com.ananya.urlshortner.domain.entites.modles.ShortUrl;
 import com.ananya.urlshortner.domain.entites.modles.repositories.ShortUrlRepository;
 import com.ananya.urlshortner.models.CreateShortUrlCmd;
+import com.ananya.urlshortner.models.PagedResult;
 import com.ananya.urlshortner.models.ShortUrlDto;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ananya.urlshortner.domain.entites.modles.repositories.UserRepository;
@@ -24,7 +29,7 @@ public class ShortUrlService {
     private final ShortUrlRepository shortUrlRepository;
     private final EntityMapper entityMapper;
     private final ApplicationProperties properties;
-    private  final UserRepository userRepository;
+    private final UserRepository userRepository;
 
     public ShortUrlService(ShortUrlRepository shortUrlRepository,
                            EntityMapper entityMapper,
@@ -35,17 +40,20 @@ public class ShortUrlService {
         this.userRepository = userRepository;
     }
 
-    public List<ShortUrlDto> findAllPublicShortUrls() {
-        return shortUrlRepository.findPublicShortUrls()
-                .stream().map(entityMapper::toShortUrlDto).toList();
+    public PagedResult<ShortUrlDto> findAllPublicShortUrls(int pageNo, int pageSize) {
+        pageNo = pageNo > 1 ? pageNo - 1 : 0;
+        Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<ShortUrlDto> shortUrlDtoPage = shortUrlRepository.findPublicShortUrls(pageable)
+                .map(entityMapper::toShortUrlDto);
+        return PagedResult.from(shortUrlDtoPage);
     }
 
     @Transactional
     public ShortUrlDto createShortUrl(CreateShortUrlCmd cmd) {
-        if(properties.validateOriginalUrl()) {
+        if (properties.validateOriginalUrl()) {
             boolean urlExists = UrlExistenceValidator.isUrlExists(cmd.originalUrl());
-            if(!urlExists) {
-                throw new RuntimeException("Invalid URL "+cmd.originalUrl());
+            if (!urlExists) {
+                throw new RuntimeException("Invalid URL " + cmd.originalUrl());
             }
         }
         var shortKey = generateUniqueShortKey();
@@ -55,13 +63,11 @@ public class ShortUrlService {
         if (cmd.userId() == null) {
             shortUrl.setCreatedBy(null);
             shortUrl.setIsPrivate(false);
-            shortUrl.setIsPrivate(false);
             shortUrl.setExpiresAt(Instant.now().plus(properties.defaultExpiryInDays(), DAYS));
-        }
-        else{
+        } else {
             shortUrl.setCreatedBy(userRepository.findById(cmd.userId()).orElseThrow());
-            shortUrl.setIsPrivate(cmd.isPrivate()!=null&&cmd.isPrivate());
-            shortUrl.setExpiresAt(cmd.expirationInDays()!=null ? Instant.now().plus(cmd.expirationInDays(), DAYS) : null);
+            shortUrl.setIsPrivate(cmd.isPrivate() != null && cmd.isPrivate());
+            shortUrl.setExpiresAt(cmd.expirationInDays() != null ? Instant.now().plus(cmd.expirationInDays(), DAYS) : null);
         }
         shortUrl.setClickCount(0L);
         shortUrl.setCreatedAt(Instant.now());
@@ -88,21 +94,22 @@ public class ShortUrlService {
         }
         return sb.toString();
     }
+
     @Transactional
     public Optional<ShortUrlDto> accessShortUrl(String shortKey, Long userId) {
-        Optional<ShortUrl>shortUrlOptional=shortUrlRepository.findByShortKey(shortKey);
-        if (shortUrlOptional.isEmpty()){
+        Optional<ShortUrl> shortUrlOptional = shortUrlRepository.findByShortKey(shortKey);
+        if (shortUrlOptional.isEmpty()) {
             return Optional.empty();
         }
-        ShortUrl shortUrl=shortUrlOptional.get();
-        if (shortUrl.getExpiresAt()!=null && shortUrl.getExpiresAt().isBefore(Instant.now())) {
+        ShortUrl shortUrl = shortUrlOptional.get();
+        if (shortUrl.getExpiresAt() != null && shortUrl.getExpiresAt().isBefore(Instant.now())) {
             return Optional.empty();
         }
-       if (shortUrl.getIsPrivate()!=null && shortUrl.getCreatedBy()!=null
-        &&  !Objects.equals(shortUrl.getCreatedBy().getId(),userId)) {
-           return Optional.empty();
-       }
-        shortUrl.setClickCount(shortUrl.getClickCount()+1);
+        if (shortUrl.getIsPrivate() != null && shortUrl.getCreatedBy() != null
+                && !Objects.equals(shortUrl.getCreatedBy().getId(), userId)) {
+            return Optional.empty();
+        }
+        shortUrl.setClickCount(shortUrl.getClickCount() + 1);
         shortUrlRepository.save(shortUrl);
         return shortUrlOptional.map(entityMapper::toShortUrlDto);
     }

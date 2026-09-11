@@ -5,6 +5,7 @@ import com.ananya.urlshortner.domain.entites.modles.Services.ShortUrlService;
 import com.ananya.urlshortner.domain.entites.modles.User;
 import com.ananya.urlshortner.domain.entites.modles.exceptions.ShortUrlNotFoundException;
 import com.ananya.urlshortner.models.CreateShortUrlCmd;
+import com.ananya.urlshortner.models.PagedResult;
 import com.ananya.urlshortner.models.ShortUrlDto;
 import com.ananya.urlshortner.web.controllers.dtos.CreateShortUrlForm;
 
@@ -33,13 +34,19 @@ public class HomeController {
     }
 
     @GetMapping("/")
-    public String home(Model model) {
-        List<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls();
-        model.addAttribute("shortUrls", shortUrls);
-        model.addAttribute("baseUrl", properties.baseUrl());
+    public String home(
+            @RequestParam(defaultValue = "1") Integer page,
+            Model model) {
+        this.addShortUrlDataToModel(model, page);
         model.addAttribute("createShortUrlForm",
                 new CreateShortUrlForm("", false, null));
         return "index";
+    }
+
+    private void addShortUrlDataToModel(Model model,int pageNo){
+        PagedResult<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls(pageNo,properties.pageSize());
+        model.addAttribute("shortUrls", shortUrls);
+        model.addAttribute("baseUrl", properties.baseUrl());
     }
 
     @PostMapping("/short-urls")
@@ -48,9 +55,7 @@ public class HomeController {
                           RedirectAttributes redirectAttributes,
                           Model model) {
         if(bindingResult.hasErrors()) {
-            List<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls();
-            model.addAttribute("shortUrls", shortUrls);
-            model.addAttribute("baseUrl", properties.baseUrl());
+            this.addShortUrlDataToModel(model,1);
             return "index";
         }
 
