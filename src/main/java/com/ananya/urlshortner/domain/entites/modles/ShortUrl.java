@@ -29,7 +29,7 @@ public class ShortUrl {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
-    private User createdBy;
+    private com.ananya.urlshortner.domain.entites.modles.User createdBy;
 
     @ColumnDefault("0")
     @Column(name = "click_count", nullable = false)

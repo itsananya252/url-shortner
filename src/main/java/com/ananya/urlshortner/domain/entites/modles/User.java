@@ -8,7 +8,6 @@ import java.time.Instant;
 @Entity
 @Table(name = "users")
 public class User {
-
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_id_gen")
     @SequenceGenerator(name = "users_id_gen", sequenceName = "users_id_seq", allocationSize = 1)
@@ -27,7 +26,7 @@ public class User {
     @ColumnDefault("'ROLE_USER'")
     @Column(name = "role", nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
-    private Role role;   // ✅ CHANGED: String → Role
+    private Role role;
 
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "created_at", nullable = false)
@@ -65,12 +64,10 @@ public class User {
         this.name = name;
     }
 
-    // ✅ CHANGED: Getter type
     public Role getRole() {
         return role;
     }
 
-    // ✅ CHANGED: Setter type
     public void setRole(Role role) {
         this.role = role;
     }
@@ -82,4 +79,5 @@ public class User {
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
+
 }

@@ -11,6 +11,7 @@ import com.ananya.urlshortner.web.controllers.dtos.CreateShortUrlForm;
 
 import jakarta.validation.Valid;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -27,7 +28,9 @@ public class HomeController {
     private final ApplicationProperties properties;
     private final SecurityUtils securityUtils;
 
-    public HomeController(ShortUrlService shortUrlService, ApplicationProperties properties, SecurityUtils securityUtils) {
+    public HomeController(ShortUrlService shortUrlService,
+                          ApplicationProperties properties,
+                          SecurityUtils securityUtils) {
         this.shortUrlService = shortUrlService;
         this.properties = properties;
         this.securityUtils = securityUtils;
@@ -37,14 +40,15 @@ public class HomeController {
     public String home(
             @RequestParam(defaultValue = "1") Integer page,
             Model model) {
-        this.addShortUrlDataToModel(model, page);
+        this.addShortUrlsDataToModel(model, page);
+        model.addAttribute("paginationUrl", "/");
         model.addAttribute("createShortUrlForm",
                 new CreateShortUrlForm("", false, null));
         return "index";
     }
 
-    private void addShortUrlDataToModel(Model model,int pageNo){
-        PagedResult<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls(pageNo,properties.pageSize());
+    private void addShortUrlsDataToModel(Model model, int pageNo) {
+        PagedResult<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls(pageNo, properties.pageSize());
         model.addAttribute("shortUrls", shortUrls);
         model.addAttribute("baseUrl", properties.baseUrl());
     }
@@ -55,7 +59,7 @@ public class HomeController {
                           RedirectAttributes redirectAttributes,
                           Model model) {
         if(bindingResult.hasErrors()) {
-            this.addShortUrlDataToModel(model,1);
+            this.addShortUrlsDataToModel(model, 1);
             return "index";
         }
 
@@ -91,5 +95,39 @@ public class HomeController {
     @GetMapping("/login")
     String loginForm() {
         return "login";
+    }
+
+    @GetMapping("/my-urls")
+    public String showUserUrls(
+            @RequestParam(defaultValue = "1") int page,
+            Model model) {
+        var currentUserId = securityUtils.getCurrentUserId();
+        PagedResult<ShortUrlDto> myUrls =
+                shortUrlService.getUserShortUrls(currentUserId, page, properties.pageSize());
+        model.addAttribute("shortUrls", myUrls);
+        model.addAttribute("baseUrl", properties.baseUrl());
+        model.addAttribute("paginationUrl", "/my-urls");
+        return "my-urls";
+    }
+
+    @PostMapping("/delete-urls")
+    public String deleteUrls(
+            @RequestParam(value = "ids", required = false) List<Long> ids,
+            RedirectAttributes redirectAttributes) {
+        if (ids == null || ids.isEmpty()) {
+            redirectAttributes.addFlashAttribute(
+                    "errorMessage", "No URLs selected for deletion");
+            return "redirect:/my-urls";
+        }
+        try {
+            var currentUserId = securityUtils.getCurrentUserId();
+            shortUrlService.deleteUserShortUrls(ids, currentUserId);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Selected URLs have been deleted successfully");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Error deleting URLs: " + e.getMessage());
+        }
+        return "redirect:/my-urls";
     }
 }
